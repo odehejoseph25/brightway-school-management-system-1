@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: brightway
+      POSTGRES_USER: brightway
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brightway -d brightway"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  web:
+    build: .
+    restart: unless-stopped
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY}
+      DEBUG: "False"
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+      DATABASE_URL: postgresql://brightway:${POSTGRES_PASSWORD}@db:5432/brightway
+    ports: ["8000:8000"]
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  postgres_data:
